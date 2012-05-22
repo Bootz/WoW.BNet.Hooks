@@ -40,7 +40,6 @@ public:
 		return true;
 	}
 
-private:
 	int FieldType; // Type: 0 = Bool, 1 = Int, 2 = String
 	uint8_t field_8[4];
 	int IntField;

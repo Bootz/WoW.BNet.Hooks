@@ -18,14 +18,11 @@ int g_masterSock;
 uint32_t g_masterIP;
 std::map<int, BNETConnectionInfo> g_bnetSockets;
 
-void log(const wchar_t *format, ...)
+void logv(const wchar_t *format, va_list val)
 {
-	va_list val;
-	va_start(val, format);
 	wchar_t dest[16384];
 	int len = wvsprintf(dest, format, val) * 2;
 	DWORD temp;
-	va_end(val);
 
 	static HANDLE outfile = INVALID_HANDLE_VALUE;
 	if(outfile == INVALID_HANDLE_VALUE)
@@ -39,11 +36,27 @@ void log(const wchar_t *format, ...)
 	FlushFileBuffers(outfile);
 }
 
+void log(const wchar_t *format, ...)
+{
+	va_list val;
+	va_start(val, format);
+	logv(format, val);
+	va_end(val);
+}
+
 void stringify(wchar_t *out, uint8_t *buf, int size)
 {
 	for(int i = 0; i < size; i ++)
 		wsprintf(out + i * 4, L"%02x, ", buf[i]);
 	out[size * 4 - 2] = 0;
+}
+
+void BNETHookLog(const wchar_t *format, ...)
+{
+	va_list val;
+	va_start(val, format);
+	logv(format, val);
+	va_end(val);
 }
 
 void BNETHookInitialize()
