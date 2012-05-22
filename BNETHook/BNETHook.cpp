@@ -96,7 +96,7 @@ void BNETHookOnConnect(int s, uint32_t ip)
 
 void BNETHookOnSend(int s, uint8_t *data, int size)
 {
-	if(g_bnetSockets.find(s) != g_bnetSockets.end())
+	if(g_bnetSockets.find(s) != g_bnetSockets.end() && size != 0)
 	{
 		wchar_t *temp = new wchar_t[size * 4 + 4];
 		stringify(temp, data, size);
@@ -107,7 +107,7 @@ void BNETHookOnSend(int s, uint8_t *data, int size)
 
 void BNETHookOnRecv(int s, uint8_t *data, int size)
 {
-	if(g_bnetSockets.find(s) != g_bnetSockets.end())
+	if(g_bnetSockets.find(s) != g_bnetSockets.end() && size != 0)
 	{
 		wchar_t *temp = new wchar_t[size * 4 + 4];
 		stringify(temp, data, size);

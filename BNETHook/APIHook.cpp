@@ -88,7 +88,7 @@ int WSAAPI newWSAGetOverlappedResult( __in SOCKET s, __in LPWSAOVERLAPPED lpOver
 	if(g_overlappedResults.find(lpOverlapped) != g_overlappedResults.end())
 	{
 		if(g_overlappedResults[lpOverlapped].second == 1)
-			BNETHookOnRecv((int)s, (uint8_t *)g_overlappedResults[lpOverlapped].first->buf, g_overlappedResults[lpOverlapped].first->len);
+			BNETHookOnRecv((int)s, (uint8_t *)g_overlappedResults[lpOverlapped].first->buf, *lpcbTransfer);
 		else
 			DebugBreak();
 		g_overlappedResults.erase(lpOverlapped);
@@ -120,7 +120,7 @@ int WINAPI newgetqueuedcompletionstatus( __in HANDLE CompletionPort, __out LPDWO
 	if(g_overlappedResults.find(*lpOverlapped) != g_overlappedResults.end())
 	{
 		if(g_overlappedResults[*lpOverlapped].second == 1)
-			BNETHookOnRecv((int)g_iocphandles[CompletionPort][*lpCompletionKey], (uint8_t *)g_overlappedResults[*lpOverlapped].first->buf, g_overlappedResults[*lpOverlapped].first->len);
+			BNETHookOnRecv((int)g_iocphandles[CompletionPort][*lpCompletionKey], (uint8_t *)g_overlappedResults[*lpOverlapped].first->buf, *lpNumberOfBytesTransferred);
 		else
 			DebugBreak();
 		g_overlappedResults.erase(*lpOverlapped);
@@ -143,7 +143,7 @@ int WSAAPI
 	if(lpNumberOfBytesRecvd && *lpNumberOfBytesRecvd)
 	{
 		if(dwBufferCount == 1)
-			BNETHookOnRecv((int)s, (uint8_t *)lpBuffers[0].buf, lpBuffers[0].len);
+			BNETHookOnRecv((int)s, (uint8_t *)lpBuffers[0].buf, *lpNumberOfBytesRecvd);
 		else
 			DebugBreak();
 	}
