@@ -80,7 +80,7 @@ int WSAAPI newconnect(
 	return oldconnect(s, name, namelen);
 }
 
-std::map<LPOVERLAPPED, std::pair<LPWSABUF, DWORD> > g_overlappedResults;
+std::map<LPOVERLAPPED, std::pair<WSABUF, DWORD> > g_overlappedResults;
 
 int WSAAPI newWSAGetOverlappedResult( __in SOCKET s, __in LPWSAOVERLAPPED lpOverlapped, __out LPDWORD lpcbTransfer, __in BOOL fWait, __out LPDWORD lpdwFlags )
 {
@@ -88,7 +88,7 @@ int WSAAPI newWSAGetOverlappedResult( __in SOCKET s, __in LPWSAOVERLAPPED lpOver
 	if(g_overlappedResults.find(lpOverlapped) != g_overlappedResults.end())
 	{
 		if(g_overlappedResults[lpOverlapped].second == 1)
-			BNETHookOnRecv((int)s, (uint8_t *)g_overlappedResults[lpOverlapped].first->buf, *lpcbTransfer);
+			BNETHookOnRecv((int)s, (uint8_t *)g_overlappedResults[lpOverlapped].first.buf, *lpcbTransfer);
 		else
 			DebugBreak();
 		g_overlappedResults.erase(lpOverlapped);
@@ -120,7 +120,7 @@ int WINAPI newgetqueuedcompletionstatus( __in HANDLE CompletionPort, __out LPDWO
 	if(g_overlappedResults.find(*lpOverlapped) != g_overlappedResults.end())
 	{
 		if(g_overlappedResults[*lpOverlapped].second == 1)
-			BNETHookOnRecv((int)g_iocphandles[CompletionPort][*lpCompletionKey], (uint8_t *)g_overlappedResults[*lpOverlapped].first->buf, *lpNumberOfBytesTransferred);
+			BNETHookOnRecv((int)g_iocphandles[CompletionPort][*lpCompletionKey], (uint8_t *)g_overlappedResults[*lpOverlapped].first.buf, *lpNumberOfBytesTransferred);
 		else
 			DebugBreak();
 		g_overlappedResults.erase(*lpOverlapped);
@@ -149,7 +149,10 @@ int WSAAPI
 	}
 	else if(lpOverlapped)
 	{
-		g_overlappedResults[lpOverlapped] = std::make_pair(lpBuffers, dwBufferCount);
+		if(dwBufferCount == 1)
+			g_overlappedResults[lpOverlapped] = std::make_pair(lpBuffers[0], dwBufferCount);
+		else
+			DebugBreak();
 	}
 	return ret;
 }
