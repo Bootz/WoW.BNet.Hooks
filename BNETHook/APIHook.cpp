@@ -1,9 +1,11 @@
 #include "APIHook.h"
 
 #define INCL_WINSOCK_API_TYPEDEFS 1
+#define WIN32_LEAN_AND_MEAN
 
-#include <winsock2.h>
 #include <windows.h>
+#include <winsock2.h>
+#include <Ws2tcpip.h>
 #include <cstdint>
 
 #include <map>
@@ -16,6 +18,15 @@
 
 typedef FARPROC (WINAPI *GETPROCADDRESS)(HMODULE, LPCSTR);
 
+typedef
+	INT
+	(WSAAPI * LPFN_GETADDRINFO)(
+	__in_opt        PCSTR               pNodeName,
+	__in_opt        PCSTR               pServiceName,
+	__in_opt        const ADDRINFOA *   pHints,
+	__deref_out     PADDRINFOA *        ppResult
+	);
+
 LPFN_CONNECT oldconnect = nullptr;
 LPFN_SEND oldsend = nullptr;
 LPFN_RECV oldrecv = nullptr;
@@ -24,6 +35,7 @@ LPFN_GETHOSTBYNAME oldgethostbyname = nullptr;
 LPFN_WSARECV oldwsarecv = nullptr;
 LPFN_WSASEND oldwsasend = nullptr;
 LPFN_WSAGETOVERLAPPEDRESULT oldwsagetoverlappedresult = nullptr;
+LPFN_GETADDRINFO oldgetaddrinfo = nullptr;
 GETPROCADDRESS oldGetProcAddress = nullptr;
 
 struct hostent FAR *
@@ -159,6 +171,15 @@ FARPROC WINAPI newGetProcAddress(HMODULE mod, LPCSTR str)
 	return oldGetProcAddress(mod, str);
 }
 
+int WSAAPI newgetaddrinfo( __in_opt PCSTR pNodeName, __in_opt PCSTR pServiceName, __in_opt const ADDRINFOA * pHints, __deref_out PADDRINFOA * ppResult )
+{
+	int ret = oldgetaddrinfo(pNodeName, pServiceName, pHints, ppResult);
+	if(pNodeName && ppResult && ppResult[0])
+		BNETHookOnHostFind(pNodeName, ((sockaddr_in *)ppResult[0]->ai_addr)->sin_addr.S_un.S_addr);
+
+	return ret;
+}
+
 void InitializeHook()
 {
 	MH_Initialize();
@@ -189,6 +210,11 @@ void InitializeHook()
 
 	MH_CreateHook(&gethostbyname, &newgethostbyname, (void **)&oldgethostbyname);
 	MH_EnableHook(&gethostbyname);
+
+	MH_CreateHook(&getaddrinfo, &newgetaddrinfo, (void **)&oldgetaddrinfo);
+	MH_EnableHook(&getaddrinfo);
+
+	BNETHookInitialize();
 }
 
 void UninitializeHook()

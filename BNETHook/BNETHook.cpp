@@ -46,6 +46,11 @@ void stringify(wchar_t *out, uint8_t *buf, int size)
 	out[size * 4 - 2] = 0;
 }
 
+void BNETHookInitialize()
+{
+	log(L"Initialize");
+}
+
 void BNETHookSetEncryptionKey(uint8_t *buffer, int length)
 {
 	uint8_t DecryptionKey[] =  { 0x68, 0xE0, 0xC7, 0x2E, 0xDD, 0xD6, 0xD2, 0xF3, 0x1E, 0x5A, 0xB1, 0x55, 0xB1, 0x8B, 0x63, 0x1E };
@@ -62,23 +67,30 @@ void BNETHookSetEncryptionKey(uint8_t *buffer, int length)
 
 void BNETHookOnHostFind(const char *host, uint32_t ip)
 {
-	if(strstr(host, "battle.net"))
+	if(strstr(host, "logon.battle.net") || strstr(host, "actual.battle.net"))
+	{
 		g_masterIP = ip;
+		log(L"Got master IP %S => %x.", host, ip);
+	}
 }
 
 void BNETHookOnClose(int s)
 {
 	if(g_bnetSockets.find(s) != g_bnetSockets.end())
+	{
 		g_bnetSockets.erase(s);
+		log(L"Disconnect");
+	}
 }
 
 void BNETHookOnConnect(int s, uint32_t ip)
 {
+	log(L"New connection to %x", ip);
 	if(ip == g_masterIP)
 	{
 		g_masterSock = s;
 		g_bnetSockets[s] = BNETConnectionInfo();
-		log(L"New connection to %x", ip);
+		log(L"Battle.net 2.0 master connection start");
 	}
 }
 

@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+void BNETHookInitialize();
 void BNETHookOnHostFind(const char *host, uint32_t ip);
 void BNETHookOnClose(int s);
 void BNETHookOnConnect(int s, uint32_t ip);

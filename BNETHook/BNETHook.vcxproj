@@ -59,7 +59,8 @@
       <ModuleDefinitionFile>HookMain.def</ModuleDefinitionFile>
     </Link>
     <PostBuildEvent>
-      <Command>copy $(TargetDir)$(TargetFileName) "C:\users\public\games\World of Warcraft\d3d9.dll"</Command>
+      <Command>copy $(TargetDir)$(TargetFileName) "C:\users\public\games\World of Warcraft\d3d9.dll"
+copy $(TargetDir)$(TargetFileName) "C:\users\public\games\Diablo III\d3d9.dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -79,6 +80,10 @@
       <OptimizeReferences>true</OptimizeReferences>
       <ModuleDefinitionFile>HookMain.def</ModuleDefinitionFile>
     </Link>
+    <PostBuildEvent>
+      <Command>copy $(TargetDir)$(TargetFileName) "C:\users\public\games\World of Warcraft\d3d9.dll"
+copy $(TargetDir)$(TargetFileName) "C:\users\public\games\Diablo III\d3d9.dll"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="APIHook.cpp" />
