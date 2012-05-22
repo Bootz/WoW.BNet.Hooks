@@ -27,6 +27,9 @@ typedef
 	__deref_out     PADDRINFOA *        ppResult
 	);
 
+typedef int (WINAPI *GETQUEUEDCOMPLETTIONSTATUS)(HANDLE, LPDWORD, PULONG_PTR, LPOVERLAPPED *, DWORD);
+typedef HANDLE (WINAPI *CREATEIOCOMPLETIONPORT)(HANDLE, HANDLE, ULONG_PTR, DWORD);
+
 LPFN_CONNECT oldconnect = nullptr;
 LPFN_SEND oldsend = nullptr;
 LPFN_RECV oldrecv = nullptr;
@@ -37,6 +40,8 @@ LPFN_WSASEND oldwsasend = nullptr;
 LPFN_WSAGETOVERLAPPEDRESULT oldwsagetoverlappedresult = nullptr;
 LPFN_GETADDRINFO oldgetaddrinfo = nullptr;
 GETPROCADDRESS oldGetProcAddress = nullptr;
+GETQUEUEDCOMPLETTIONSTATUS oldgetqueuedcompletionstatus = nullptr;
+CREATEIOCOMPLETIONPORT oldcreateiocompletionport = nullptr;
 
 struct hostent FAR *
 	WSAAPI
@@ -79,6 +84,7 @@ std::map<LPOVERLAPPED, std::pair<LPWSABUF, DWORD> > g_overlappedResults;
 
 int WSAAPI newWSAGetOverlappedResult( __in SOCKET s, __in LPWSAOVERLAPPED lpOverlapped, __out LPDWORD lpcbTransfer, __in BOOL fWait, __out LPDWORD lpdwFlags )
 {
+	int ret = oldwsagetoverlappedresult(s, lpOverlapped, lpcbTransfer, fWait, lpdwFlags);
 	if(g_overlappedResults.find(lpOverlapped) != g_overlappedResults.end())
 	{
 		if(g_overlappedResults[lpOverlapped].second == 1)
@@ -87,7 +93,39 @@ int WSAAPI newWSAGetOverlappedResult( __in SOCKET s, __in LPWSAOVERLAPPED lpOver
 			DebugBreak();
 		g_overlappedResults.erase(lpOverlapped);
 	}
-	return oldwsagetoverlappedresult(s, lpOverlapped, lpcbTransfer, fWait, lpdwFlags);
+	return ret;
+}
+
+std::map<HANDLE, std::map<DWORD, HANDLE> > g_iocphandles;
+
+HANDLE WINAPI newcreateiocompletionport(
+	__in      HANDLE FileHandle,
+	__in_opt  HANDLE ExistingCompletionPort,
+	__in      ULONG_PTR CompletionKey,
+	__in      DWORD NumberOfConcurrentThreads
+	)
+{
+	HANDLE ret = oldcreateiocompletionport(FileHandle, ExistingCompletionPort, CompletionKey, NumberOfConcurrentThreads);
+	if(ExistingCompletionPort != NULL && FileHandle != INVALID_HANDLE_VALUE)
+		g_iocphandles[ExistingCompletionPort][CompletionKey] = FileHandle;
+	else if(ExistingCompletionPort == NULL && FileHandle != INVALID_HANDLE_VALUE)
+		g_iocphandles[ret][CompletionKey] = FileHandle;
+
+	return ret;
+}
+
+int WINAPI newgetqueuedcompletionstatus( __in HANDLE CompletionPort, __out LPDWORD lpNumberOfBytesTransferred, __out PULONG_PTR lpCompletionKey, __out LPOVERLAPPED *lpOverlapped, __in DWORD dwMilliseconds)
+{
+	int ret = oldgetqueuedcompletionstatus(CompletionPort, lpNumberOfBytesTransferred, lpCompletionKey, lpOverlapped, dwMilliseconds);
+	if(g_overlappedResults.find(*lpOverlapped) != g_overlappedResults.end())
+	{
+		if(g_overlappedResults[*lpOverlapped].second == 1)
+			BNETHookOnRecv((int)g_iocphandles[CompletionPort][*lpCompletionKey], (uint8_t *)g_overlappedResults[*lpOverlapped].first->buf, g_overlappedResults[*lpOverlapped].first->len);
+		else
+			DebugBreak();
+		g_overlappedResults.erase(*lpOverlapped);
+	}
+	return ret;
 }
 
 int WSAAPI
@@ -213,6 +251,12 @@ void InitializeHook()
 
 	MH_CreateHook(&getaddrinfo, &newgetaddrinfo, (void **)&oldgetaddrinfo);
 	MH_EnableHook(&getaddrinfo);
+
+	MH_CreateHook(&GetQueuedCompletionStatus, &newgetqueuedcompletionstatus, (void **)&oldgetqueuedcompletionstatus);
+	MH_EnableHook(&GetQueuedCompletionStatus);
+
+	MH_CreateHook(&CreateIoCompletionPort, &newcreateiocompletionport, (void **)&oldcreateiocompletionport);
+	MH_EnableHook(&CreateIoCompletionPort);
 
 	BNETHookInitialize();
 }
