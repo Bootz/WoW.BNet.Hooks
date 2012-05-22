@@ -13,7 +13,7 @@ public:
 	virtual bool GetBuffer( unsigned int Index, unsigned char **Buffer, int *Length)
 	{
 		bool ret = m_realLibrary->GetBuffer(Index, Buffer, Length);
-		if(Length)
+		if(Length && ret)
 			BNETHookLog(L"ProxyLibrary Getbuffer %x %d", Index, *Length);
 		return ret;
 	}
