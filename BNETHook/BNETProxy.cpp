@@ -81,6 +81,7 @@ public:
 	virtual ~ProxyModule() {}
 	virtual void Destroy()
 	{
+		BNETHookLog(L"ProxyModule Destroy");
 		m_realModule->Destroy();
 	}
 
