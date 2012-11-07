@@ -266,5 +266,17 @@ void InitializeHook()
 
 void UninitializeHook()
 {
+	MH_DisableHook(&GetProcAddress);
+	MH_DisableHook(&connect);
+	MH_DisableHook(&recv);
+	MH_DisableHook(&WSARecv);
+	MH_DisableHook(&WSAGetOverlappedResult);
+	MH_DisableHook(&WSASend);
+	MH_DisableHook(&send);
+	MH_DisableHook(&closesocket);
+	MH_DisableHook(&gethostbyname);
+	MH_DisableHook(&getaddrinfo);
+	MH_DisableHook(&GetQueuedCompletionStatus);
+	MH_DisableHook(&CreateIoCompletionPort);
 	MH_Uninitialize();
 }

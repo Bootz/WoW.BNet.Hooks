@@ -65,5 +65,5 @@ void InitializeDelegate()
 
 void UninitializeDelegate()
 {
-
+	FreeLibrary(reald3d9);
 }
