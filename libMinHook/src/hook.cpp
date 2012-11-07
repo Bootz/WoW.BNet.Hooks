@@ -33,7 +33,7 @@
 #include <boost/scope_exit.hpp>
 #include <boost/foreach.hpp>
 #include <Windows.h>
-#include "pstdint.h"
+//#include "pstdint.h"
 
 #include "../MinHook.h"
 #include "hook.h"

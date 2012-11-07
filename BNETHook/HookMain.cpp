@@ -7,9 +7,9 @@
 #pragma comment(lib, "libeay32.lib")
 
 #ifdef _DEBUG
-#pragma comment(lib, "../Debug/libMinHook.x86.lib")
+#pragma comment(lib, "../Debug/libMinHook.lib")
 #else
-#pragma comment(lib, "../Release/libMinHook.x86.lib")
+#pragma comment(lib, "../Release/libMinHook.lib")
 #endif
 
 int APIENTRY DllMain(_In_ void * _HDllHandle, _In_ unsigned _Reason, _In_opt_ void * _Reserved)
