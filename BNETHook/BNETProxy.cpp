@@ -22,7 +22,7 @@ public:
 	{
 		BNETHookLog(L"ProxyLibrary SetBuffer %x %d",Index, Length);
 		if(Index == 0xB6E372AE) //set encryption
-			BNETHookSetEncryptionKey(Buffer, Length);
+			BNETHookSetSessionKey(Buffer, Length);
 		return m_realLibrary->SetBuffer(Index, Buffer, Length);
 	}
 

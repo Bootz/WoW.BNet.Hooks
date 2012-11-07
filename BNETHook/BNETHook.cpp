@@ -72,7 +72,7 @@ void BNETHookInitialize()
 	log(L"Initialize");
 }
 
-void BNETHookSetEncryptionKey(uint8_t *buffer, int length)
+void BNETHookSetSessionKey(uint8_t *buffer, int length)
 {
 	uint8_t DecryptionKey[] =  { 0x68, 0xE0, 0xC7, 0x2E, 0xDD, 0xD6, 0xD2, 0xF3, 0x1E, 0x5A, 0xB1, 0x55, 0xB1, 0x8B, 0x63, 0x1E };
 	uint8_t EncryptionKey[] = { 0xDE, 0xA9, 0x65, 0xAE, 0x54, 0x3A, 0x1E, 0x93, 0x9E, 0x69, 0x0C, 0xAA, 0x68, 0xDE, 0x78, 0x39 };
@@ -93,7 +93,7 @@ void BNETHookOnHostFind(const char *host, uint32_t ip)
 	if(strstr(host, "logon.battle.net") || strstr(host, "actual.battle.net"))
 	{
 		g_masterIP = ip;
-		log(L"Got master IP %S => %x.", host, ip);
+		log(L"Got IP %S => %x.", host, ip);
 	}
 }
 
@@ -102,18 +102,17 @@ void BNETHookOnClose(int s)
 	if(g_bnetSockets.find(s) != g_bnetSockets.end())
 	{
 		g_bnetSockets.erase(s);
-		log(L"Disconnect");
+		log(L"Battle.net 2.0 connection Disconnected");
 	}
 }
 
 void BNETHookOnConnect(int s, uint32_t ip)
 {
-	log(L"New connection to %x", ip);
 	if(ip == g_masterIP)
 	{
 		g_masterSock = s;
 		g_bnetSockets[s] = BNETConnectionInfo();
-		log(L"Battle.net 2.0 master connection start");
+		log(L"Battle.net 2.0 connection start");
 	}
 }
 
@@ -122,15 +121,16 @@ void BNETHookOnSend(int s, uint8_t *data, int size)
 	if(g_bnetSockets.find(s) != g_bnetSockets.end() && size != 0)
 	{
 		std::wstring dataStr;
+		std::vector<uint8_t> realData;
 		if(g_bnetSockets[s].useCrypt)
-			dataStr = stringify(g_bnetSockets[s].encryption->Process(std::vector<uint8_t>(data, data + size)));
+			realData = g_bnetSockets[s].encryption->Process(std::vector<uint8_t>(data, data + size));
 		else
 		{
-			dataStr = stringify(std::vector<uint8_t>(data, data + size));
+			realData = std::vector<uint8_t>(data, data + size);
 			if(g_bnetSockets[s].encryption != nullptr)
 				g_bnetSockets[s].useCrypt = true; //Encrypted stream starts after seeding key and sending 2-byte packet(45 01)
 		}
-		log(L"Send: %s", dataStr.c_str());
+		log(L"Send: %s", stringify(realData).c_str());
 	}
 }
 
@@ -139,10 +139,11 @@ void BNETHookOnRecv(int s, uint8_t *data, int size)
 	if(g_bnetSockets.find(s) != g_bnetSockets.end() && size != 0)
 	{
 		std::wstring dataStr;
+		std::vector<uint8_t> realData;
 		if(g_bnetSockets[s].useCrypt)
-			dataStr = stringify(g_bnetSockets[s].decryption->Process(std::vector<uint8_t>(data, data + size)));
+			realData = g_bnetSockets[s].decryption->Process(std::vector<uint8_t>(data, data + size));
 		else
-			dataStr = stringify(std::vector<uint8_t>(data, data + size));
-		log(L"Recv: %s", dataStr.c_str());
+			realData = std::vector<uint8_t>(data, data + size);
+		log(L"Recv: %s", stringify(realData).c_str());
 	}
 }
