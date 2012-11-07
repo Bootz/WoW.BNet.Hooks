@@ -3,6 +3,9 @@
 #include "RC4Crypt.h"
 #include "HMACSHA256.h"
 
+#include <string>
+#include <sstream>
+#include <iomanip>
 #include <map>
 #include <varargs.h>
 #include <Windows.h>
@@ -12,6 +15,9 @@ struct BNETConnectionInfo
 	RC4Crypt *encryption;
 	RC4Crypt *decryption;
 	std::vector<uint8_t> sessionKey;
+	bool useCrypt;
+
+	BNETConnectionInfo() : useCrypt(false), encryption(nullptr), decryption(nullptr) {}
 };
 
 int g_masterSock;
@@ -44,11 +50,13 @@ void log(const wchar_t *format, ...)
 	va_end(val);
 }
 
-void stringify(wchar_t *out, uint8_t *buf, int size)
+std::wstring stringify(std::vector<uint8_t> data)
 {
-	for(int i = 0; i < size; i ++)
-		wsprintf(out + i * 4, L"%02x, ", buf[i]);
-	out[size * 4 - 2] = 0;
+	std::wstringstream str;
+	for(auto it = data.begin(), end = data.end(); it != end; it ++)
+		str << std::setw(2) << std::setfill(L'0') << std::hex << *it << ", ";
+
+	return str.str();
 }
 
 void BNETHookLog(const wchar_t *format, ...)
@@ -76,6 +84,8 @@ void BNETHookSetEncryptionKey(uint8_t *buffer, int length)
 	g_bnetSockets[g_masterSock].encryption = new RC4Crypt(calculatedEncryptKey);
 	g_bnetSockets[g_masterSock].decryption = new RC4Crypt(calculatedDecryptKey);
 	g_bnetSockets[g_masterSock].sessionKey.assign(buffer, buffer + length);
+
+	log(L"Session key: %s", stringify(std::vector<uint8_t>(buffer, buffer + length)).c_str());
 }
 
 void BNETHookOnHostFind(const char *host, uint32_t ip)
@@ -111,10 +121,16 @@ void BNETHookOnSend(int s, uint8_t *data, int size)
 {
 	if(g_bnetSockets.find(s) != g_bnetSockets.end() && size != 0)
 	{
-		wchar_t *temp = new wchar_t[size * 4 + 4];
-		stringify(temp, data, size);
-		log(L"Send: %s", temp);
-		delete [] temp;
+		std::wstring dataStr;
+		if(g_bnetSockets[s].useCrypt)
+			dataStr = stringify(g_bnetSockets[s].encryption->Process(std::vector<uint8_t>(data, data + size)));
+		else
+		{
+			dataStr = stringify(std::vector<uint8_t>(data, data + size));
+			if(g_bnetSockets[s].encryption != nullptr)
+				g_bnetSockets[s].useCrypt = true; //Encrypted stream starts after seeding key and sending 2-byte packet(45 01)
+		}
+		log(L"Send: %s", dataStr.c_str());
 	}
 }
 
@@ -122,9 +138,11 @@ void BNETHookOnRecv(int s, uint8_t *data, int size)
 {
 	if(g_bnetSockets.find(s) != g_bnetSockets.end() && size != 0)
 	{
-		wchar_t *temp = new wchar_t[size * 4 + 4];
-		stringify(temp, data, size);
-		log(L"Recv: %s", temp);
-		delete [] temp;
+		std::wstring dataStr;
+		if(g_bnetSockets[s].useCrypt)
+			dataStr = stringify(g_bnetSockets[s].decryption->Process(std::vector<uint8_t>(data, data + size)));
+		else
+			dataStr = stringify(std::vector<uint8_t>(data, data + size));
+		log(L"Recv: %s", dataStr.c_str());
 	}
 }
